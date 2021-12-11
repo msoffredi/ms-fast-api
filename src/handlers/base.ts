@@ -1,15 +1,27 @@
 import {
+    AuthPermission,
     BadRequestError,
     CustomError,
     ResponseBody,
+    routeAuthorizer,
 } from '@jmsoffredi/ms-common';
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import {
+    APIGatewayEvent,
+    APIGatewayProxyEvent,
+    APIGatewayProxyResult,
+} from 'aws-lambda';
 import { createEntity } from './operations/add-one';
 import { deleteEntity } from './operations/delete-one';
 import { getCollection } from './operations/get-collection';
 import { getEntity } from './operations/get-one';
 import { healthcheck } from './operations/healthcheck';
-import { API, APIDefinition, APIEntity, Endpoint } from './types';
+import {
+    API,
+    APIDefinition,
+    APIEntity,
+    Endpoint,
+    OperationHandler,
+} from './types';
 
 export const APIHandler = async (
     apiConfig: API,
@@ -31,13 +43,19 @@ export const APIHandler = async (
             switch (httpMethod) {
                 case 'GET':
                     if (endpoints[0].collection) {
-                        body = await getCollection(
+                        body = await authorizedEndpoint(
                             apiConfig,
-                            event,
                             endpoints[0],
+                            event,
+                            getCollection,
                         );
                     } else if (!endpoints[0].healthcheck) {
-                        body = await getEntity(apiConfig, event, endpoints[0]);
+                        body = await authorizedEndpoint(
+                            apiConfig,
+                            endpoints[0],
+                            event,
+                            getEntity,
+                        );
                     } else {
                         body = await healthcheck();
                     }
@@ -45,11 +63,21 @@ export const APIHandler = async (
                     break;
 
                 case 'DELETE':
-                    body = await deleteEntity(apiConfig, event, endpoints[0]);
+                    body = await authorizedEndpoint(
+                        apiConfig,
+                        endpoints[0],
+                        event,
+                        deleteEntity,
+                    );
                     break;
 
                 case 'POST':
-                    body = await createEntity(apiConfig, event, endpoints[0]);
+                    body = await authorizedEndpoint(
+                        apiConfig,
+                        endpoints[0],
+                        event,
+                        createEntity,
+                    );
                     break;
             }
         } else {
@@ -137,4 +165,40 @@ const getAPIPkName = (api: APIEntity): string => {
     }
 
     throw new Error(`No hashKey available in the API entity`);
+};
+
+const authorizedEndpoint = async (
+    apiConfig: API,
+    endpoint: Endpoint,
+    event: APIGatewayEvent,
+    callback: OperationHandler,
+) => {
+    const methodDefinition =
+        apiConfig[endpoint.apiEntityName].api[
+            endpoint.method as keyof APIDefinition
+        ];
+
+    let auth: AuthPermission[] = [];
+
+    if (
+        methodDefinition &&
+        'auth' in methodDefinition &&
+        methodDefinition['auth'] !== undefined
+    ) {
+        if (Array.isArray(methodDefinition['auth'])) {
+            auth = methodDefinition['auth'];
+        } else {
+            auth.push(methodDefinition['auth']);
+        }
+    }
+
+    return methodDefinition && 'auth' in methodDefinition
+        ? await routeAuthorizer(
+              event,
+              async (event: APIGatewayProxyEvent): Promise<ResponseBody> => {
+                  return await callback(apiConfig, event, endpoint);
+              },
+              auth,
+          )
+        : await getCollection(apiConfig, event, endpoint);
 };
