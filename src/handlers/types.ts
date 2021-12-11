@@ -1,4 +1,10 @@
-import { EventBusTypes, Serializers } from '@jmsoffredi/ms-common';
+import {
+    AuthPermission,
+    EventBusTypes,
+    ResponseBody,
+    Serializers,
+} from '@jmsoffredi/ms-common';
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import { SchemaDefinition, TimestampObject } from 'dynamoose/dist/Schema';
 
 export interface SchemaSettings {
@@ -28,6 +34,7 @@ export interface APIDefinition {
     get?: {
         collection?: boolean;
         entity?: boolean;
+        auth?: AuthPermission | AuthPermission[];
     };
     delete?: {
         entity: OperationDefinition;
@@ -61,3 +68,9 @@ export interface APIEntity {
 export interface API {
     [apiName: string]: APIEntity;
 }
+
+export type OperationHandler = (
+    apiConfig: API,
+    event: APIGatewayProxyEvent,
+    endpoint: Endpoint,
+) => Promise<ResponseBody>;
