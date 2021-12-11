@@ -200,5 +200,5 @@ const authorizedEndpoint = async (
               },
               auth,
           )
-        : await getCollection(apiConfig, event, endpoint);
+        : await callback(apiConfig, event, endpoint);
 };
