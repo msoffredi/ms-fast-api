@@ -38,9 +38,11 @@ export interface APIDefinition {
     };
     delete?: {
         entity: OperationDefinition;
+        auth?: AuthPermission | AuthPermission[];
     };
     post?: {
         collection: OperationDefinition;
+        auth?: AuthPermission | AuthPermission[];
     };
 }
 
