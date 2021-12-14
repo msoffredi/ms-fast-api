@@ -4,6 +4,7 @@ import { AnyDocument } from 'dynamoose/dist/Document';
 import jwt from 'jsonwebtoken';
 
 export const testUserEmail = 'test@test.com';
+export const testUserId = 'user123';
 
 const defaultEntity = {
     id: 'id123',
@@ -59,11 +60,13 @@ export const constructAuthenticatedAPIGwEvent = (
     options: Record<string, unknown>,
     userEmail = testUserEmail,
     userPermissions = [['*', '*']],
+    userId = testUserId,
 ): APIGatewayProxyEvent => {
     const token = jwt.sign(
         {
             email: userEmail,
             userPermissions: JSON.stringify(userPermissions),
+            'custom:userId': userId,
         },
         'test',
     );

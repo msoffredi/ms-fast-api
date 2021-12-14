@@ -35,6 +35,7 @@ export interface APIDefinition {
         collection?: boolean;
         entity?: boolean;
         auth?: AuthPermission | AuthPermission[];
+        authSelf?: boolean;
     };
     delete?: {
         entity: OperationDefinition;

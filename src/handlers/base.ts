@@ -183,7 +183,7 @@ const authorizedEndpoint = async (
     if (
         methodDefinition &&
         'auth' in methodDefinition &&
-        methodDefinition['auth'] !== undefined
+        methodDefinition.auth !== undefined
     ) {
         if (Array.isArray(methodDefinition['auth'])) {
             auth = methodDefinition['auth'];
@@ -192,13 +192,23 @@ const authorizedEndpoint = async (
         }
     }
 
-    return methodDefinition && 'auth' in methodDefinition
+    const authSelf =
+        methodDefinition &&
+        'authSelf' in methodDefinition &&
+        methodDefinition.authSelf !== undefined
+            ? methodDefinition.authSelf
+            : false;
+
+    return methodDefinition &&
+        'auth' in methodDefinition &&
+        methodDefinition.auth !== undefined
         ? await routeAuthorizer(
               event,
               async (event: APIGatewayProxyEvent): Promise<ResponseBody> => {
                   return await callback(apiConfig, event, endpoint);
               },
               auth,
+              authSelf,
           )
         : await callback(apiConfig, event, endpoint);
 };
