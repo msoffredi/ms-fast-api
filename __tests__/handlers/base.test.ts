@@ -18,11 +18,13 @@ const api: API = {
         },
         api: {
             get: {
+                entity: true,
                 collection: true,
                 auth: {
                     moduleId: 'test-module',
                     operationId: 'test-operation',
                 },
+                authSelf: true,
             },
         },
         timestamps: true,
@@ -35,7 +37,7 @@ const api: API = {
 };
 
 it('returns a list of entities on GET with proper API config', async () => {
-    const entity = await addEntity();
+    await addEntity();
 
     const event = constructAuthenticatedAPIGwEvent(
         {},
@@ -50,7 +52,7 @@ it('returns a list of entities on GET with proper API config', async () => {
 });
 
 it('throws a 401 error if an endpoint is hit without enough permissions', async () => {
-    const entity = await addEntity();
+    await addEntity();
 
     const event = constructAuthenticatedAPIGwEvent(
         {},
@@ -66,7 +68,7 @@ it('throws a 401 error if an endpoint is hit without enough permissions', async 
 });
 
 it('gets a 200 and data an endpoint is hit with enough permissions', async () => {
-    const entity = await addEntity();
+    await addEntity();
 
     const event = constructAuthenticatedAPIGwEvent(
         {},
@@ -76,6 +78,24 @@ it('gets a 200 and data an endpoint is hit with enough permissions', async () =>
         },
         testUserEmail,
         [['test-module', 'test-operation']],
+    );
+    const result = await APIHandler(api, event);
+    expect(result.statusCode).toEqual(200);
+});
+
+it('returns user when getting own entity with API confirgured accordingly', async () => {
+    const entity = await addEntity();
+
+    const event = constructAuthenticatedAPIGwEvent(
+        {},
+        {
+            method: 'GET',
+            resource: '/entities/{id}',
+            pathParameters: { id: entity.id },
+        },
+        testUserEmail,
+        [['wrong-module', 'wrong-operation']],
+        entity.id,
     );
     const result = await APIHandler(api, event);
     expect(result.statusCode).toEqual(200);
